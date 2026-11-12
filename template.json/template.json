@@ -1,0 +1,27 @@
+{
+  "name": "Ubuntu Freeroot Web Terminal",
+  "description": "Terminal Linux berbasis web menggunakan Ubuntu, ttyd, freeroot, dan akses root instan.",
+  "icon": "https://assets.ubuntu.com/v1/ico-orange.svg",
+  "variables": {
+    "USERNAME": {
+      "description": "Username login terminal web",
+      "default": "root"
+    },
+    "PASSWORD": {
+      "description": "Password login terminal web",
+      "default": "linn1502"
+    }
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "services": [
+      {
+        "builder": "DOCKERFILE",
+        "variables": [
+          "USERNAME",
+          "PASSWORD"
+        ]
+      }
+    ]
+  }
+}
