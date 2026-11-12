@@ -1,17 +1,15 @@
-FROM kalilinux/kali-rolling
+FROM ubuntu:latest
 
-# Railway will override PORT; keep a local default
 ENV PORT=7681
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-     ca-certificates wget curl git python3 python3-pip tini fastfetch tmux
+     ca-certificates wget curl git sudo unminimize python3 python3-pip tini fastfetch tmux \
+  && rm -rf /var/lib/apt/lists/*
 
-# Ensure the target dir exists
 RUN mkdir -p /usr/local/bin
 
-# Install latest ttyd (pick correct binary for the CPU)
 RUN set -eux; \
     arch="$(uname -m)"; \
     case "$arch" in \
@@ -22,12 +20,15 @@ RUN set -eux; \
     wget -qO /usr/local/bin/ttyd "https://github.com/tsl0922/ttyd/releases/latest/download/${ttyd_asset}" \
     && chmod +x /usr/local/bin/ttyd
 
-# Show system info on shell start (fastfetch)
+RUN git clone https://github.com/Mytai20100/freeroot.git /opt/freeroot
+
+ENV USERNAME=root
+ENV PASSWORD=linn1502
+
 RUN echo "fastfetch || true" >> /root/.bashrc
 
 EXPOSE 7681
 
 ENTRYPOINT ["/usr/bin/tini","--"]
 
-# Menggunakan tmux agar sesi terminal tetap hidup meskipun browser/tab ditutup
-CMD ["/bin/bash","-lc", "/usr/local/bin/ttyd --writable -i 0.0.0.0 -p ${PORT} -c ${USERNAME}:${PASSWORD} tmux new-session -A -s main /bin/bash"]
+CMD ["/bin/bash", "-lc", "cd /opt/freeroot && bash noninteractive.sh & sleep 2 && /usr/local/bin/ttyd --writable -i 0.0.0.0 -p ${PORT} -c ${USERNAME}:${PASSWORD} tmux new-session -A -s main /bin/bash"]
