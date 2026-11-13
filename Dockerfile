@@ -5,8 +5,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-     ca-certificates wget curl git sudo unminimize python3 python3-pip tini fastfetch tmux \
+     ca-certificates wget curl git sudo unminimize python3 python3-pip tini fastfetch tmux openssh-server \
   && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /var/run/sshd \
+  && chmod 755 /var/run/sshd \
+  && ssh-keygen -A
+
+RUN echo "root:linn1502" | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 RUN mkdir -p /usr/local/bin
 
@@ -27,8 +36,8 @@ ENV PASSWORD=linn1502
 
 RUN echo "fastfetch || true" >> /root/.bashrc
 
-EXPOSE 7681
+EXPOSE 7681 22
 
 ENTRYPOINT ["/usr/bin/tini","--"]
 
-CMD ["/bin/bash", "-lc", "cd /opt/freeroot && bash noninteractive.sh & sleep 2 && /usr/local/bin/ttyd --writable -i 0.0.0.0 -p ${PORT} -c ${USERNAME}:${PASSWORD} tmux new-session -A -s main /bin/bash"]
+CMD ["/bin/bash", "-lc", "service ssh start && cd /opt/freeroot && bash noninteractive.sh & sleep 2 && /usr/local/bin/ttyd --writable -i 0.0.0.0 -p ${PORT} -c ${USERNAME}:${PASSWORD} tmux new-session -A -s main /bin/bash"]
