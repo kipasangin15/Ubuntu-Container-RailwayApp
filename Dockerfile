@@ -1,43 +1,50 @@
-FROM ubuntu:latest
+FROM ubuntu:24.04
 
-ENV PORT=7681
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Asia/Jakarta \
+    PORT=7681 \
+    ROOT_PASSWORD=linn1502
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-     ca-certificates wget curl git sudo unminimize python3 python3-pip tini fastfetch tmux openssh-server \
+     ca-certificates wget curl git sudo nano htop procps iputils-ping net-tools \
+     python3 python3-pip tini tmux openssh-server locales \
   && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /var/run/sshd \
-  && chmod 755 /var/run/sshd \
-  && ssh-keygen -A
+# fastfetch tidak selalu ada di repo 24.04, jadi opsional
+RUN (apt-get update && apt-get install -y --no-install-recommends fastfetch && rm -rf /var/lib/apt/lists/*) || true
 
-RUN echo "root:linn1502" | chpasswd
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
-
-RUN mkdir -p /usr/local/bin
+# Konfigurasi SSH: drop-in "00-" dibaca paling awal sehingga menang atas config lain
+RUN mkdir -p /run/sshd /etc/ssh/sshd_config.d \
+  && chmod 755 /run/sshd \
+  && ssh-keygen -A \
+  && printf '%s\n' \
+       'PermitRootLogin yes' \
+       'PasswordAuthentication yes' \
+       'KbdInteractiveAuthentication no' \
+       'UsePAM yes' \
+       'ListenAddress 0.0.0.0' \
+       'ListenAddress ::' \
+       'ClientAliveInterval 30' \
+       'ClientAliveCountMax 4' \
+     > /etc/ssh/sshd_config.d/00-railway.conf
 
 RUN set -eux; \
     arch="$(uname -m)"; \
     case "$arch" in \
-      x86_64|amd64) ttyd_asset="ttyd.x86_64" ;; \
-      aarch64|arm64) ttyd_asset="ttyd.aarch64" ;; \
+      x86_64|amd64) a="ttyd.x86_64" ;; \
+      aarch64|arm64) a="ttyd.aarch64" ;; \
       *) echo "Unsupported arch: $arch" >&2; exit 1 ;; \
     esac; \
-    wget -qO /usr/local/bin/ttyd "https://github.com/tsl0922/ttyd/releases/latest/download/${ttyd_asset}" \
-    && chmod +x /usr/local/bin/ttyd
+    wget -qO /usr/local/bin/ttyd "https://github.com/tsl0922/ttyd/releases/latest/download/${a}"; \
+    chmod +x /usr/local/bin/ttyd
 
-RUN git clone https://github.com/Mytai20100/freeroot.git /opt/freeroot
+RUN git clone --depth 1 https://github.com/Mytai20100/freeroot.git /opt/freeroot || true
 
-ENV USERNAME=root
-ENV PASSWORD=linn1502
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh \
+  && echo 'command -v fastfetch >/dev/null && fastfetch || true' >> /root/.bashrc
 
-RUN echo "fastfetch || true" >> /root/.bashrc
-
-EXPOSE 7681 22
-
+EXPOSE 22 7681
 ENTRYPOINT ["/usr/bin/tini","--"]
-
-CMD ["/bin/bash", "-lc", "service ssh start && cd /opt/freeroot && bash noninteractive.sh & sleep 2 && /usr/local/bin/ttyd --writable -i 0.0.0.0 -p ${PORT} -c ${USERNAME}:${PASSWORD} tmux new-session -A -s main /bin/bash"]
+CMD ["/usr/local/bin/start.sh"]
