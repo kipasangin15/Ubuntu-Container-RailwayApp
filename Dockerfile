@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Asia/Jakarta \
-    PORT=7681 \
+    TTYD_PORT=7681 \
     ROOT_PASSWORD=linn1502
 
 RUN apt-get update \
