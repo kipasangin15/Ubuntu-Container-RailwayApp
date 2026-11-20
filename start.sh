@@ -13,6 +13,7 @@ if [ -d /opt/freeroot ]; then
   (cd /opt/freeroot && bash noninteractive.sh </dev/null >/dev/null 2>&1 &)
 fi
 
-# ttyd = web terminal (port ${PORT}); proses utama yang menjaga container tetap hidup
-exec /usr/local/bin/ttyd --writable -i 0.0.0.0 -p "${PORT:-7681}" \
+# ttyd = web terminal. JANGAN pakai $PORT: Railway meng-set PORT=22 (port TCP proxy) -> bentrok dengan sshd
+# proses utama yang menjaga container tetap hidup
+exec /usr/local/bin/ttyd --writable -i 0.0.0.0 -p "${TTYD_PORT:-7681}" \
   -c "root:${ROOT_PASSWORD}" tmux new-session -A -s main /bin/bash
